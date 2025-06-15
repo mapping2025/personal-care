@@ -1,0 +1,191 @@
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>personal-care</title>
+
+  <style>
+    html,
+    body {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+    #swipeButton {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 99;
+      padding: 10px;
+      background-color: white;
+      border: 1px solid #ccc;
+      cursor: pointer;
+    }
+
+    /* Styles for the transparency sliders */
+    .transparency-container {
+      padding: 10px;
+      background-color: white;
+      border: 1px solid #ccc;
+      margin-top: 5px;
+    }
+
+    .transparency-label {
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    .transparency-slider {
+      width: 100%;
+    }
+  </style>
+
+  <!-- Load ArcGIS API for JavaScript -->
+  <link rel="stylesheet" href="https://js.arcgis.com/4.30/esri/themes/light/main.css">
+  <script src="https://js.arcgis.com/4.30/"></script>
+</head>
+
+<body>
+
+  <!-- Container for the map -->
+  <div id="viewDiv" style="height: 100%; width: 100%;"></div>
+  
+  <!-- Button to activate swipe tool -->
+  <button id="swipeButton">Activate Swipe</button>
+
+  <script>
+    require([
+      "esri/WebMap",
+      "esri/views/MapView",
+      "esri/widgets/LayerList",
+      "esri/widgets/Expand",
+      "esri/widgets/BasemapGallery",
+      "esri/widgets/Home",
+      "esri/widgets/Swipe",
+      "esri/widgets/Legend"
+    ], function(WebMap, MapView, LayerList, Expand, BasemapGallery, Home, Swipe, Legend) {
+
+      // Create a WebMap instance with the web map item ID
+      var webmap = new WebMap({
+        portalItem: {
+          id: "37954b52bfb24d9bb49455ee08c1c481" // Replace with your web map item ID
+        }
+      });
+
+      // Create a MapView instance to display the WebMap
+      var view = new MapView({
+        container: "viewDiv",
+        map: webmap
+      });
+
+      view.when(function() {
+        // Move zoom controls down
+        view.ui.move("zoom", "top-left"); // Ensure zoom control is in top-left
+
+        view.ui.add("zoom", {
+          position: "top-left",
+          index: 1 // Adjust this index to ensure correct stacking order
+        });
+
+        // Add margin to move the zoom controls down
+        const zoomElement = document.querySelector(".esri-ui-top-left .esri-component.esri-zoom");
+        zoomElement.style.marginTop = "50px"; // Move down by 50px
+
+        // MAP NAVIGATION TOOLS
+        var homeButton = new Home({
+          view: view
+        });
+        view.ui.add(homeButton, "top-left");
+
+        // ADDING UTILITIES
+
+        // Adding the layers list
+        let layerList = new LayerList({
+          view: view
+        });
+        const dataLayers = new Expand({
+          view: view,
+          content: layerList,
+          group: 'button-widget'
+        });
+        view.ui.add(dataLayers, "top-right");
+
+        // Add basemap gallery to the expand
+        const basemapGallery = new BasemapGallery({
+          view: view,
+          container: document.createElement("div")
+        });
+
+        const baseMaps = new Expand({
+          view: view,
+          content: basemapGallery,
+          group: 'button-widget'
+        });
+
+        view.ui.add(baseMaps, "top-right");
+
+        // Add Legend widget
+        var legend = new Legend({
+          view: view
+        });
+        view.ui.add(legend, "bottom-right");
+
+        // Transparency Control Widgets
+        const transparencyDiv = document.createElement("div");
+
+        webmap.layers.forEach(function(layer, index) {
+          const layerDiv = document.createElement("div");
+          layerDiv.className = "transparency-container";
+
+          const label = document.createElement("div");
+          label.className = "transparency-label";
+          label.textContent = layer.title;
+
+          const slider = document.createElement("input");
+          slider.type = "range";
+          slider.className = "transparency-slider";
+          slider.min = 0;
+          slider.max = 1;
+          slider.step = 0.01;
+          slider.value = layer.opacity;
+
+          // Update the layer transparency when the slider value changes
+          slider.addEventListener("input", function() {
+            layer.opacity = parseFloat(slider.value);
+          });
+
+          layerDiv.appendChild(label);
+          layerDiv.appendChild(slider);
+          transparencyDiv.appendChild(layerDiv);
+        });
+
+        // Add transparency controls to the UI below the basemap gallery
+        const transparencyExpand = new Expand({
+          view: view,
+          content: transparencyDiv,
+          group: 'button-widget'
+        });
+
+        view.ui.add(transparencyExpand, "top-right");
+
+        // Initialize Swipe widget, but do not add it yet
+        let swipe = new Swipe({
+          view: view,
+          leadingLayers: [webmap.layers.getItemAt(1)], // First layer
+          trailingLayers: [webmap.layers.getItemAt(2)], // Second layer
+          position: 10 // Position of the swipe tool as a percentage
+        });
+
+        // Add event listener to the button to activate the swipe tool
+        document.getElementById("swipeButton").addEventListener("click", function() {
+          view.ui.add(swipe);
+          document.getElementById("swipeButton").disabled = true; // Disable the button after activating swipe
+        });
+
+      });
+    });
+  </script>
+
+</body>
+</html>
